@@ -52,3 +52,10 @@ test('自动生成输入键包含秒和金额，规范等价金额保持稳定�
   assert.notEqual(paymentInputKey(defaults), paymentInputKey({ ...defaults, amount: '28.81' }));
   assert.equal(paymentInputKey({ amount: '0', payDate: '2024-02-29', payTime: '00:00:00' }), '2024-02-29T00:00:00|0.00');
 });
+test('可选收单机构说明允许留空，仍校验长度与控制字符', () => {
+  assert.ok(validate({ ...defaults, acquirerNote: '' }).model);
+  assert.ok(validate({ ...defaults, acquirerNote: '由清算机构提供服务\n说明可以换行' }).model);
+  assert.ok(validate({ ...defaults, acquirerNote: '😀'.repeat(100) }).model);
+  assert.ok(validate({ ...defaults, acquirerNote: '😀'.repeat(101) }).errors.acquirerNote);
+  assert.ok(validate({ ...defaults, acquirerNote: '\u0001' }).errors.acquirerNote);
+});

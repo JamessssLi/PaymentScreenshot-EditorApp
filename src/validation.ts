@@ -25,8 +25,8 @@ export function validate(draft: ReceiptDraft): { errors: Errors; model?: RenderM
     const limit = key === 'barcode' ? 32 : 64;
     if (!new RegExp(`^[A-Za-z0-9-]{1,${limit}}$`).test(draft[key])) errors[key] = `请输入 1–${limit} 位 ASCII 字母、数字或连字符。`;
   }
-  for (const key of ['merchant', 'product', 'company', 'acquirer', 'method', 'network', ...(draft.orderMode === 'hint' ? ['orderHint'] : [])] as (keyof ReceiptDraft)[]) {
-    if (!draft[key].trim()) errors[key] = '请填写内容，不能仅有空格。';
+  for (const key of ['merchant', 'product', 'company', 'acquirer', 'acquirerNote', 'method', 'network', ...(draft.orderMode === 'hint' ? ['orderHint'] : [])] as (keyof ReceiptDraft)[]) {
+    if (!draft[key].trim() && key !== 'acquirerNote') errors[key] = '请填写内容，不能仅有空格。';
     else if (Array.from(draft[key]).length > 100) errors[key] = '请缩短至 100 个 Unicode 字符以内。';
     else if (/[\u0000-\u0008\u000b-\u001f\u007f]/.test(draft[key])) errors[key] = '请移除不可见的控制字符。';
   }

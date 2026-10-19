@@ -42,6 +42,56 @@ async function save(name) {
 }
 await page.screenshot({ path: path.join(evidence, 'editor-desktop.png'), fullPage: true });
 await save('default');
+async function inputValues(keys) {
+  return Object.fromEntries(await Promise.all(keys.map(async key => [key, await page.locator(`#${key}`).inputValue()])));
+}
+const paymentFields = ['amount', 'payDate', 'payTime', 'transaction', 'barcode', 'status', 'orderMode', 'orderHint', 'order', 'clock', 'battery'];
+const beforePreset = await inputValues(paymentFields);
+assert.equal(await page.locator('#merchant-preset option').count(), 3);
+await page.locator('#merchant-preset').selectOption('like-lai');
+await page.locator('#preview-state').filter({ hasText: '已同步' }).waitFor();
+assert.equal(await page.locator('#merchant').inputValue(), '青岛利客来集团股份有限公司购物中心');
+assert.equal(await page.locator('#product').inputValue(), await page.locator('#merchant').inputValue());
+assert.equal(await page.locator('#company').inputValue(), await page.locator('#merchant').inputValue());
+assert.equal(await page.locator('#acquirer').inputValue(), '银联商务支付股份有限公司');
+assert.equal(await page.locator('#acquirerNote').inputValue(), '');
+assert.equal(await page.locator('#method').inputValue(), '零钱');
+assert.equal(await page.locator('#more').getAttribute('open'), null, '更多字段折叠时也可应用预设');
+assert.deepEqual(await inputValues(paymentFields), beforePreset, '预设不覆盖金额、时间、编号和其他状态');
+assert.match(await page.locator('#preset-avatar').getAttribute('src'), /^data:image\/png;base64,/);
+const colorfulIcon = await page.locator('#preview').evaluate(canvas => {
+  const pixels = canvas.getContext('2d').getImageData(577, 411, 125, 125).data;
+  let count = 0; for (let i = 0; i < pixels.length; i += 4) if (Math.max(pixels[i], pixels[i + 1], pixels[i + 2]) - Math.min(pixels[i], pixels[i + 1], pixels[i + 2]) > 50) count++;
+  return count;
+});
+assert.ok(colorfulIcon > 3000, '内嵌彩色头像实际进入预览与导出');
+await save('merchant-like-lai');
+await page.locator('#merchant-preset').selectOption('haipai-yiyue');
+await page.locator('#preview-state').filter({ hasText: '已同步' }).waitFor();
+assert.equal(await page.locator('#merchant').inputValue(), '市北区海派怡悦餐厅');
+assert.equal(await page.locator('#acquirerNote').inputValue(), '由中国银联股份有限公司提供收款清算服务');
+assert.deepEqual(await inputValues(paymentFields), beforePreset);
+await save('merchant-haipai');
+await page.screenshot({ path: path.join(evidence, 'editor-presets.png'), fullPage: true });
+// 连续选择只接受最后一次头像载入，选择后立即编辑也不会被异步回写覆盖。
+await page.evaluate(() => {
+  const select = document.querySelector('#merchant-preset');
+  select.value = 'like-lai'; select.dispatchEvent(new Event('change'));
+  select.value = 'haipai-yiyue'; select.dispatchEvent(new Event('change'));
+});
+await page.locator('#preview-state').filter({ hasText: '已同步' }).waitFor();
+assert.equal(await page.locator('#merchant-preset').inputValue(), 'haipai-yiyue');
+assert.equal(await page.locator('#merchant').inputValue(), '市北区海派怡悦餐厅');
+await page.evaluate(() => {
+  const select = document.querySelector('#merchant-preset');
+  select.value = 'like-lai'; select.dispatchEvent(new Event('change'));
+  const merchant = document.querySelector('#merchant'); merchant.value = '手动填写的商户'; merchant.dispatchEvent(new Event('input'));
+});
+await page.locator('#preview-state').filter({ hasText: '已同步' }).waitFor();
+assert.equal(await page.locator('#merchant').inputValue(), '手动填写的商户');
+assert.equal(await page.locator('#merchant-preset').inputValue(), '', '手动编辑后转为自定义');
+await page.reload(); await page.locator('#preview-state').filter({ hasText: '已同步' }).waitFor();
+assert.equal(await page.locator('#merchant-preset').inputValue(), '', '刷新不预选真实商家');
 async function checkGeneratedDate(date) {
   const transaction = await page.locator('#transaction').inputValue();
   const barcode = await page.locator('#barcode').inputValue();
@@ -161,6 +211,6 @@ assert.deepEqual(external, []); assert.deepEqual(pageErrors, []);
 await page.reload();
 assert.equal(await page.locator('#amount').inputValue(), '28.80', '刷新恢复虚构默认值');
 await writeFile(path.join(evidence, 'export-expectations.json'), JSON.stringify(expectedExports, null, 2));
-await writeFile(path.join(evidence, 'browser-results.json'), JSON.stringify({ browser: await browser.version(), platform: `${os.platform()} ${os.arch()}`, htmlSha256: createHash('sha256').update(await readFile(path.join(isolated, 'receipt-editor.html'))).digest('hex'), isolatedDirectory: isolated, offline: true, externalRequests: external, pageErrors, exported: Object.keys(expectedExports), checks: ['自动编号随跨年、闰日、秒与金额变化更新，规范等价金额保持稳定', '手动字段不被覆盖，另一自动字段继续更新，恢复自动可用', 'Apple 系统字体栈与无斜体条码文字', 'file:// 新目录只含一个 HTML 独立打开', '离线编辑、5 MB PNG / JPEG 图标上传、PNG 下载', '预览与导出 PNG 完全一致，缩放不改变像素', '金额错误禁止导出', '伪造、无法解码与超大图片禁止导出、默认图标恢复', '最长编号、长中文换行、超高布局拦截', '1440×1000、1366×768、1280×800 常用字段及导出首屏可见', '窄屏无页面横向溢出', '纽约/东京时区保留墙上日期时间与秒、零秒输入', 'Canvas 导出失败可恢复、重复提交只下载一次、点击快照稳定', '刷新恢复默认值'] }, null, 2));
+await writeFile(path.join(evidence, 'browser-results.json'), JSON.stringify({ browser: await browser.version(), platform: `${os.platform()} ${os.arch()}`, htmlSha256: createHash('sha256').update(await readFile(path.join(isolated, 'receipt-editor.html'))).digest('hex'), isolatedDirectory: isolated, offline: true, externalRequests: external, pageErrors, exported: Object.keys(expectedExports), checks: ['两项商家预设在折叠状态下一次填充信息和内嵌头像，交易相关字段保持不变', '连续预设切换与载入期间手动编辑无异步覆盖，刷新回到自定义商户', '自动编号随跨年、闰日、秒与金额变化更新，规范等价金额保持稳定', '手动字段不被覆盖，另一自动字段继续更新，恢复自动可用', 'Apple 系统字体栈与无斜体条码文字', 'file:// 新目录只含一个 HTML 独立打开', '离线编辑、5 MB PNG / JPEG 图标上传、PNG 下载', '预览与导出 PNG 完全一致，缩放不改变像素', '金额错误禁止导出', '伪造、无法解码与超大图片禁止导出、默认图标恢复', '最长编号、长中文换行、超高布局拦截', '1440×1000、1366×768、1280×800 常用字段及导出首屏可见', '窄屏无页面横向溢出', '纽约/东京时区保留墙上日期时间与秒、零秒输入', 'Canvas 导出失败可恢复、重复提交只下载一次、点击快照稳定', '刷新恢复默认值'] }, null, 2));
 console.log(`浏览器验证完成，证据：${evidence}`);
 } finally { await browser.close(); }

@@ -9,7 +9,7 @@ export interface Layout {
   merchantY: number;
   merchantLines: string[];
   amountY: number;
-  rows: { label: string; lines: string[]; y: number }[];
+  rows: { label: string; lines: string[]; y: number; noteLines: string[]; noteY: number }[];
   barcodeY: number;
   barcode: HTMLCanvasElement;
   networkLines: string[];
@@ -37,11 +37,14 @@ export function layout(ctx: CanvasRenderingContext2D, model: RenderModel): Layou
   const merchantLines = wrap(ctx, model.merchant, 1090);
   const amountY = merchantY + 175 + (merchantLines.length - 1) * 78;
   let y = amountY + 376;
-  font(ctx, t.bodySize);
   const rows = t.rows.map(([label, key]) => {
+    font(ctx, t.bodySize);
     const lines = wrap(ctx, model[key], t.valueWidth);
-    const row = { label, lines, y };
-    y += lines.length * t.lineHeight + t.rowGap;
+    const noteY = y + lines.length * t.lineHeight + t.noteGap;
+    font(ctx, t.noteSize);
+    const noteLines = key === 'acquirer' && model.acquirerNote.trim() ? wrap(ctx, model.acquirerNote, t.valueWidth) : [];
+    const row = { label, lines, y, noteLines, noteY };
+    y += lines.length * t.lineHeight + (noteLines.length ? t.noteGap + noteLines.length * t.noteLineHeight : 0) + t.rowGap;
     return row;
   });
   const barcodeY = y + t.barcode.afterRows;
@@ -107,6 +110,7 @@ export function render(canvas: HTMLCanvasElement, model: RenderModel, icon: HTML
   for (const row of l.rows) {
     text(row.label, t.margin, row.y, t.bodySize, t.muted);
     row.lines.forEach((v, i) => text(v, t.valueX, row.y + i * t.lineHeight));
+    row.noteLines.forEach((v, i) => text(v, t.valueX, row.noteY + i * t.noteLineHeight, t.noteSize, t.muted));
   }
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(l.barcode, Math.floor((t.width - l.barcode.width) / 2), l.barcodeY);

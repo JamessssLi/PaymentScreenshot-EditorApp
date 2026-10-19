@@ -1,6 +1,8 @@
 # 支付详情编辑器
 
-交付文件：`dist/receipt-editor.html`（约 90 KiB）。分享时只发送这一个文件；源码、Sample、node_modules 和 dist 中的其他构建文件均不需要发送。
+交付文件：`dist/receipt-editor.html`（约 125 KiB）。分享时只发送这一个文件；源码、Sample、node_modules 和 dist 中的其他构建文件均不需要发送。
+
+添加商家预设之前的版本已保存至 [GitHub 备份分支](https://github.com/JamessssLi/PaymentScreenshot-EditorApp/tree/backup/2026-10-19-before-merchant-presets)，提交为 `6ecd7c115110a63876ed3054738f7eb204c61880`。已核对线上独立 HTML 与改动前本地文件的字节一致。本轮商家预设新版交付在本地，尚未再次推送；备份分支保留改动前版本。
 
 ## 使用者操作
 
@@ -10,16 +12,20 @@
 
 商户、图标、支付方式和状态栏在默认折叠的“更多字段”中。无需安装依赖、执行命令或启动服务器。草稿仅在当前页面内存中保存；刷新恢复默认金额、日期等字段，并生成新的一组编号。
 
+在“编辑详情”右上方的“常用商家”中，可选择利客来购物中心或海派怡悦餐厅，自动填入商家信息与头像。金额、时间、编号和状态不随商家切换改变。选择后仍可在“更多字段”修改信息、上传头像；修改商家字段后选择框回到自定义状态。
+
 ## 已实现
 
 - 固定账单模板、表单编辑、实时 Canvas 预览、缩放及 PNG 下载。
+- 两个固定商家预设参考 Sample1、Sample3，覆盖显示名、商品、商户全称、收单机构、可选补充说明、支付方式与头像。头像仅提取样例的商家标志区域，两项共用一份内嵌资源，不包含交易区域；默认不预选真实商家，不复制样例的金额、时间或交易编号。
+- 收单机构补充说明可留空，按较小灰色字体绘制，换行后重新计算后续行位置。
 - 参考三张样例重绘黑白账单布局，保持固定标签与区域顺序；宽度 1279 像素，高度按内容计算。没有使用真实单据作为输出底图或运行资源。
 - 自动生成的 26 位数字条码黑条区实测 890×194 像素，占图宽 69.6%，接近新增样例约 69%～71% 的比例。取消原来的固定条码纵坐标，跟随“商户单号”内容向下布局。
 - 条码保留左右静区，以整数模块绘制；条码下方直接显示编码内容，取消斜体，长文字按测量宽度换行。
 - 有效日期时间（含秒）或金额变化时，自动生成新交易单号与条码，并显示生成所用时间。等价金额如 39.5 / 39.50 不会反复生成。
 - 逐项手动修改后保留该字段，另一自动字段仍跟随变化；“恢复自动”恢复两项联动。
 - 界面与 Canvas 优先使用 Apple 系统字体栈；编辑器采用白色卡片、系统蓝操作按钮及分组布局。
-- 界面与输出不添加 DEMO 前缀、模拟水印、横幅或演示说明。默认商户、金额和日期为自拟内容，未预填样例的真实交易信息。默认购物袋图标支持上传本地 PNG/JPEG 替换。
+- 界面与输出不添加 DEMO 前缀、模拟水印、横幅或演示说明。未选择商家预设时，默认商户、金额和日期仍为自拟内容；默认购物袋图标支持上传本地 PNG/JPEG 替换。
 - 交易单号与条码内容独立；商户单号可选择提示文本或编号。
 - 金额以十进制字符串规范为两位小数，日期显式校验日历，时间保留秒且不转 UTC。
 - 长文本换行、后续区域顺延、超高内容拦截、字段级错误、图片签名及解码校验、导出失败反馈和防止重复导出。
@@ -43,7 +49,7 @@
 
 字体参考 [Apple 官方字体说明](https://developer.apple.com/fonts/)及[排版指南](https://developer.apple.com/design/human-interface-guidelines/typography)，采用 `-apple-system, BlinkMacSystemFont, PingFang SC, Segoe UI, Microsoft YaHei, sans-serif`。Apple 平台优先使用本机系统字体；没有下载或内嵌 Apple 字体文件。非 Apple 平台会回退到本机字体，不承诺跨设备逐像素一致。
 
-- 宽度始终为 1279，高度随换行数变化，最大 6000；本次默认 PNG 为 1279×2678。默认图标没有复制原商户标志。
+- 宽度始终为 1279，高度随换行数变化，最大 6000；本次默认 PNG 为 1279×2678。两项预设的头像来源于用户提供的样例，原始头像约 128×128，清晰度受样例限制。
 - 手动条码的长度、字符组合不同，整数模块会造成实际宽度变化。
 - 金额最多 9 位整数、2 位小数；交易/商户编号 1–64 位、条码 1–32 位 ASCII 字母、数字或连字符；普通文本最多 100 个 Unicode 码点。本地图标最大 5 MiB，居中裁为方形。
 - Safari 可能对每次本地 Blob 下载弹出允许提示。“PNG 已生成”表示已交给浏览器，最终保存仍受浏览器下载权限控制。
@@ -57,21 +63,22 @@
 | 检查 | 结果与证据 |
 | --- | --- |
 | 类型检查与构建 | `npm run build` 通过，内联脚本语法检查通过 |
-| 核心数据规则 | `npm test`，6 组测试通过，含金额、闰日、跨年、秒、生成规则、前导零与长度边界 |
+| 核心数据规则 | `npm test`，7 组测试通过，含金额、闰日、跨年、秒、生成规则、前导零、可选补充说明与长度边界 |
 | 单文件独立运行 | 只复制一个 HTML 到新临时目录，以 file:// 打开，Chrome 通过 |
 | 离线 | Chrome 上下文在打开前设置 offline: true；编辑、5 MiB PNG/JPEG 图标与下载通过，没有更改系统网络设置 |
 | 网络与页面异常 | HTTP(S) 请求 0，页面异常 0；HTML 含禁止网络连接的 CSP |
 | 自动生成 | 跨年、闰日、秒及金额变化、等价金额稳定、单字段手动保留、恢复自动，通过 |
-| 导出一致性 | 12 张下载 PNG 与对应预览 Canvas 的 PNG 字节完全一致，缩放不改变像素 |
-| 条码独立解码 | ZXing-C++ 2.3.0 + Pillow 11.3.0，从完整 PNG 解码 12/12 通过，含自动编号、最短、最长 32 位和混合值 |
+| 商家快捷选择 | 折叠状态下一次填入两项预设、头像进入 Canvas、交易相关字段保持不变、连续切换、载入时手动编辑不被覆盖、刷新不预选商家，通过 |
+| 导出一致性 | 14 张下载 PNG 与对应预览 Canvas 的 PNG 字节完全一致，缩放不改变像素 |
+| 条码独立解码 | ZXing-C++ 2.3.0 + Pillow 11.3.0，从完整 PNG 解码 14/14 通过，含两项预设、自动编号、最短、最长 32 位和混合值 |
 | 实际条码尺寸 | 从 PNG 黑色像素独立测量，默认/跨年/闰日自动条码均为 890×194，图宽比例 69.6% |
 | 布局与资源边界 | 长中文、64 位编号、5 MiB 图标、伪造/损坏/超大图片、超高布局拦截，通过 |
 | 导出状态 | 强制 Canvas 失败后恢复、重复提交只下载一次、点击快照稳定，通过 |
 | 时间与刷新 | 纽约/东京时区保留墙上日期时间与秒，零秒可导出，刷新恢复默认输入，通过 |
-| Safari 原生流程 | 打开新版、金额联动、手动条码保留、恢复自动、实际下载 PNG，通过；金额 42.15，条码独立解码与导出前所见值一致 |
-| 图片人工检查 | 已查看默认、长文本/最长编号、最长条码与 Safari PNG，未见重叠、裁切或固定标识 |
+| Safari 原生流程 | 本轮打开新版、选择并切换两项商家、交易字段不变、餐厅预设 PNG 实际下载，条码独立解码与导出前所见值一致；未重新执行全部交互回归 |
+| 图片人工检查 | 已查看两项商家预设及 Safari 实际 PNG，头像、灰色补充说明、长商户信息与条码未见重叠或裁切 |
 
-记录位于 `verification/browser-results.json`、`decoder-results.json`、`export-expectations.json`、`safari-results.json`、`visual-review.md`。Chrome 与 Safari 记录包含同一交付 HTML 的 SHA-256。Safari 是额外一张图片，不计入 Chrome 的 12 张一致性断言。
+记录位于 `verification/browser-results.json`、`decoder-results.json`、`export-expectations.json`、`safari-results.json`、`backup-results.json`、`visual-review.md`。Chrome 与 Safari 记录包含同一交付 HTML 的 SHA-256。Safari 是额外一张图片，不计入 Chrome 的 14 张一致性断言。
 
 ## 开发者构建与测试
 
@@ -88,4 +95,4 @@ npm run test:browser
 
 独立解码需要在隔离 Python 环境中安装 `zxing-cpp==2.3.0` 和 `Pillow==11.3.0`，然后运行 `python3 "tests/decode.py"`。浏览器测试先保存预期编码清单，解码脚本读取该清单并与实际完整 PNG 比较。这些工具不进入交付 HTML。
 
-按 model、validation、identifiers、template、render、barcode、export、main 分担职责。共享校验、数据模型与渲染链路，未增加模板框架或后端；依赖由 package-lock.json 固定。CODE128 由 [JsBarcode](https://github.com/lindell/JsBarcode) 生成，PNG 使用 [Canvas toBlob](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob)，JsBarcode MIT 许可已内联到交付文件。
+按 model、validation、identifiers、merchants、template、render、barcode、export、main 分担职责。两个商家只维护固定数据，复用同一头像、图片解码、校验、数据模型和渲染链路；没有添加商家管理系统、模板框架或后端。依赖由 package-lock.json 固定。CODE128 由 [JsBarcode](https://github.com/lindell/JsBarcode) 生成，PNG 使用 [Canvas toBlob](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob)，JsBarcode MIT 许可已内联到交付文件。
