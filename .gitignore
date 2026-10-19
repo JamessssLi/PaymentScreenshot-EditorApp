@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+Sample/
+verification/
+dist/assets/
+dist/index.html
+dist/payment-demo.html
